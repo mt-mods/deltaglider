@@ -615,7 +615,7 @@ local on_use = function(itemstack, player)
 		local color = itemstack:get_meta():get("glider_color")
 		if color then
 			ent:set_properties({
-				textures = { "wool_white.png^[multiply:#" .. color }
+				textures = { xcompat.textures.wool.white .. "^[multiply:#" .. color }
 			})
 		end
 		if glider_wear then

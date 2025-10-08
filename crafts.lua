@@ -2,11 +2,14 @@
 local S = deltaglider.translator
 
 local has_basic_materials = minetest.get_modpath("basic_materials")
-local has_farming = minetest.get_modpath("farming")
-local has_pipeworks = minetest.get_modpath("pipeworks")
-local has_ropes = minetest.get_modpath("ropes")
-local has_unifieddyes = minetest.get_modpath("unifieddyes")
-local has_wool = minetest.get_modpath("wool")
+local has_farming         = minetest.get_modpath("farming")
+local has_pipeworks       = minetest.get_modpath("pipeworks")
+local has_ropes           = minetest.get_modpath("ropes")
+local has_unifieddyes     = minetest.get_modpath("unifieddyes")
+local has_wool            = minetest.get_modpath("wool")
+
+local dye_prefix_pattern_universal = "^.*dyes?:" -- Matching dye prefixes: dyes, mcl_dyes, mcl_dye, fl_dyes.
+local dye_suffix_pattern_farlands  = "_dye$"     -- A suffix added to dye names in the Farlands game.
 
 local dye_colors = {
 	white      = "ffffff",
@@ -50,7 +53,9 @@ local function get_dye_color(name)
 		color = unifieddyes.get_color_from_dye_name(name)
 	end
 	if not color then
-		color = string.match(name, "^dye:(.+)$")
+		color = string.match(name, dye_prefix_pattern_universal.."(.+)$") 
+
+		string.gsub(name, dye_suffix_pattern_farlands, "") 
 		if color then
 			color = dye_colors[color]
 		end
@@ -59,7 +64,9 @@ local function get_dye_color(name)
 end
 
 local function get_color_name(name)
-	name = string.gsub(name, "^dye:", "")
+	-- Remove prefix and potential suffix
+	name = string.gsub(name, dye_prefix_pattern_universal, "")
+	name = string.gsub(name, dye_suffix_pattern_farlands, "")
 	return translated_colors[name]
 end
 
@@ -69,7 +76,6 @@ local function get_color_name_from_color(color)
 			return translated_colors[name]
 		end
 	end
-
 	return nil
 end
 
@@ -99,8 +105,8 @@ minetest.register_on_craft(function(crafted_item, _, old_craft_grid)
 		elseif minetest.get_item_group(name, "dye") ~= 0 then
 			color = get_dye_color(name)
 			color_name = get_color_name(name)
-		elseif "wool:white" == stack:get_name()
-			or "default:paper" == stack:get_name()
+		elseif xcompat.materials.wool_white == stack:get_name()
+			or xcompat.materials.paper == stack:get_name()
 		then
 			wear = 0
 		end
@@ -125,38 +131,36 @@ end)
 minetest.register_craft({
 	output = "deltaglider:glider",
 	recipe = {
-		{ "default:paper", "default:paper", "default:paper" },
-		{ "default:paper", "deltaglider:glider", "default:paper" },
-		{ "default:paper", "default:paper", "default:paper" },
+		{ xcompat.materials.paper, xcompat.materials.paper, xcompat.materials.paper },
+		{ xcompat.materials.paper, "deltaglider:glider", xcompat.materials.paper },
+		{ xcompat.materials.paper, xcompat.materials.paper, xcompat.materials.paper },
 	},
 })
 if has_wool then
 	minetest.register_craft({
 		output = "deltaglider:glider",
 		recipe = {
-			{ "deltaglider:glider", "wool:white" },
+			{ "deltaglider:glider", xcompat.materials.wool_white },
 		},
 	})
 end
 
--- Main craft
-local fabric = "default:paper"
-local stick = "group:stick"
-local string = ""
-if has_wool then
-	fabric = "wool:white"
-end
-if has_farming then
-	string = "farming:string"
-end
+-- Crafting recipes --
+-- Fallback materials
+local stick  = "group:stick"
+local string = xcompat.materials.string
+local fabric = xcompat.materials.wool_white
+
+-- Prefer certain modded materials if present
 if has_ropes then
 	string = "ropes:ropesegment"
 end
 if has_basic_materials then
 	fabric = "basic_materials:plastic_sheet"
 	string = "basic_materials:steel_wire"
-	stick = "basic_materials:steel_strip"
+	stick  = "basic_materials:steel_strip"
 end
+-- Prefer pipeworks stick if present
 if has_pipeworks then
 	stick = "pipeworks:tube_1"
 end
