@@ -5,11 +5,11 @@ local has_basic_materials = minetest.get_modpath("basic_materials")
 local has_farming         = minetest.get_modpath("farming")
 local has_pipeworks       = minetest.get_modpath("pipeworks")
 local has_ropes           = minetest.get_modpath("ropes")
-local has_unifieddyes     = minetest.get_modpath("unifieddyes")
 local has_wool            = minetest.get_modpath("wool")
+local has_unifieddyes     = minetest.get_modpath("unifieddyes")
 
-local dye_prefix_pattern_universal = "^.*dyes?:" -- Matching dye prefixes: dyes, mcl_dyes, mcl_dye, fl_dyes.
-local dye_suffix_pattern_farlands  = "_dye$"     -- A suffix added to dye names in the Farlands game.
+local dye_prefix_pattern_universal = "^.*dyes?:" -- Known dye prefix matches: dyes, mcl_dyes, mcl_dye, fl_dyes.
+local dye_suffix_pattern_farlands  = "_dye$"     -- A suffix appended to dye names in the Farlands game.
 
 local dye_colors = {
 	white      = "ffffff",
@@ -47,15 +47,26 @@ local translated_colors = {
 	pink       = S("Pink"),
 }
 
+
+
+local function get_dye_name(name)
+	-- Remove prefix and potential suffix
+	name = string.gsub(name, dye_suffix_pattern_farlands, "")
+	name = string.match(name, dye_prefix_pattern_universal.."(.+)$")
+	print(name)
+	return name
+end
+
+
+
 local function get_dye_color(name)
 	local color
 	if has_unifieddyes then
 		color = unifieddyes.get_color_from_dye_name(name)
 	end
-	if not color then
-		color = string.match(name, dye_prefix_pattern_universal.."(.+)$") 
 
-		string.gsub(name, dye_suffix_pattern_farlands, "") 
+	if not color then
+		color = get_dye_name(name)
 		if color then
 			color = dye_colors[color]
 		end
@@ -64,10 +75,7 @@ local function get_dye_color(name)
 end
 
 local function get_color_name(name)
-	-- Remove prefix and potential suffix
-	name = string.gsub(name, dye_prefix_pattern_universal, "")
-	name = string.gsub(name, dye_suffix_pattern_farlands, "")
-	return translated_colors[name]
+	return translated_colors[get_dye_name(name)]
 end
 
 local function get_color_name_from_color(color)
