@@ -12,39 +12,47 @@ local dye_prefix_pattern_universal = "^.*dyes?:" -- Known dye prefix matches: dy
 local dye_suffix_pattern_farlands  = "_dye$"     -- A suffix appended to dye names in the Farlands game.
 
 local dye_colors = {
-	white      = "ffffff",
-	grey       = "888888",
-	dark_grey  = "444444",
 	black      = "111111",
-	violet     = "8000ff",
 	blue       = "0000ff",
+	brown      = "592c00",
 	cyan       = "00ffff",
 	dark_green = "005900",
+	dark_grey  = "444444",
 	green      = "00ff00",
-	yellow     = "ffff00",
-	brown      = "592c00",
-	orange     = "ff7f00",
-	red        = "ff0000",
+	grey       = "888888",
+	light_blue = "258ec9",
+	lime       = "60ac19",
 	magenta    = "ff00ff",
+	orange     = "ff7f00",
 	pink       = "ff7f9f",
+	purple     = "6821a0",
+	red        = "ff0000",
+	silver     = "818177",
+	violet     = "8000ff",
+	white      = "ffffff",
+	yellow     = "ffff00",
 }
 
 local translated_colors = {
-	white      = S("White"),
-	grey       = S("Grey"),
-	dark_grey  = S("Dark_grey"),
 	black      = S("Black"),
-	violet     = S("Violet"),
 	blue       = S("Blue"),
-	cyan       = S("Cyan"),
-	dark_green = S("Dark_green"),
-	green      = S("Green"),
-	yellow     = S("Yellow"),
 	brown      = S("Brown"),
-	orange     = S("Orange"),
-	red        = S("Red"),
+	cyan       = S("Cyan"),
+	dark_green = S("Dark Green"),
+	dark_grey  = S("Dark Grey"),
+	green      = S("Green"),
+	grey       = S("Grey"),
+	light_blue = S("Light Blue"),
+	lime       = S("Lime"),
 	magenta    = S("Magenta"),
+	orange     = S("Orange"),
 	pink       = S("Pink"),
+	purple     = S("Purple"),
+	red        = S("Red"),
+	silver     = S("Light Grey"),
+	violet     = S("Violet"),
+	white      = S("White"),
+	yellow     = S("Yellow"),
 }
 
 
@@ -90,7 +98,7 @@ end
 -- This recipe is just a placeholder
 do
 	local item = ItemStack("deltaglider:glider")
-	item:get_meta():set_string("description", S("Coloured Delta Glider"))
+	item:get_meta():set_string("description", S("Colored Delta Glider"))
 	minetest.register_craft({
 		output = item:to_string(),
 		recipe = { "deltaglider:glider", "group:dye" },
