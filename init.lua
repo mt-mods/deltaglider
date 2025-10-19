@@ -16,7 +16,7 @@ local vector_zero = vector.zero
 
 -- global table for exposed functions
 deltaglider = {
-	version = 20240422.025720,
+	version = 20251011.000000,
 	translator = minetest.get_translator('deltaglider'),
 }
 local S = deltaglider.translator
@@ -615,7 +615,7 @@ local on_use = function(itemstack, player)
 		local color = itemstack:get_meta():get("glider_color")
 		if color then
 			ent:set_properties({
-				textures = { "wool_white.png^[multiply:#" .. color }
+				textures = { xcompat.textures.wool.white .. "^[multiply:#" .. color }
 			})
 		end
 		if glider_wear then
