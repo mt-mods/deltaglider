@@ -41,9 +41,16 @@ minetest.register_craftitem("deltaglider:rocket", {
 	end
 })
 
-local gunpowder = minetest.get_modpath("mcl_mobitems")
-	and "mcl_mobitems:gunpowder"
-	or "tnt:gunpowder"
+
+-- Manual mod compatability
+local gunpowder = nil
+if core.get_modpath("mcl_mobitems") then    -- Mineclonia/Voxelibre or similar
+	gunpowder = "mcl_mobitems:gunpowder" 
+elseif core.get_modpath("default") then     -- default
+	gunpowder = "tnt:gunpowder"
+else
+	gunpowder = xcompat.materials.coal_lump -- Backup solution
+end
 
 minetest.register_craft({
 	output = "deltaglider:rocket 33",

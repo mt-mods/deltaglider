@@ -34,4 +34,5 @@ read_globals = {
 		}
 	},
 	"xp_redo",
+	"xcompat",
 }

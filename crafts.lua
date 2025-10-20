@@ -1,172 +1,142 @@
 
 local S = deltaglider.translator
 
+local colors = assert(dofile(core.get_modpath("deltaglider") .. "./colors.lua"))
+
 local has_basic_materials = minetest.get_modpath("basic_materials")
-local has_farming = minetest.get_modpath("farming")
-local has_pipeworks = minetest.get_modpath("pipeworks")
-local has_ropes = minetest.get_modpath("ropes")
-local has_unifieddyes = minetest.get_modpath("unifieddyes")
-local has_wool = minetest.get_modpath("wool")
+local has_pipeworks       = minetest.get_modpath("pipeworks")
+local has_ropes           = minetest.get_modpath("ropes")
 
-local dye_colors = {
-	white      = "ffffff",
-	grey       = "888888",
-	dark_grey  = "444444",
-	black      = "111111",
-	violet     = "8000ff",
-	blue       = "0000ff",
-	cyan       = "00ffff",
-	dark_green = "005900",
-	green      = "00ff00",
-	yellow     = "ffff00",
-	brown      = "592c00",
-	orange     = "ff7f00",
-	red        = "ff0000",
-	magenta    = "ff00ff",
-	pink       = "ff7f9f",
-}
 
-local translated_colors = {
-	white      = S("White"),
-	grey       = S("Grey"),
-	dark_grey  = S("Dark_grey"),
-	black      = S("Black"),
-	violet     = S("Violet"),
-	blue       = S("Blue"),
-	cyan       = S("Cyan"),
-	dark_green = S("Dark_green"),
-	green      = S("Green"),
-	yellow     = S("Yellow"),
-	brown      = S("Brown"),
-	orange     = S("Orange"),
-	red        = S("Red"),
-	magenta    = S("Magenta"),
-	pink       = S("Pink"),
-}
-
-local function get_dye_color(name)
-	local color
-	if has_unifieddyes then
-		color = unifieddyes.get_color_from_dye_name(name)
-	end
-	if not color then
-		color = string.match(name, "^dye:(.+)$")
-		if color then
-			color = dye_colors[color]
-		end
-	end
-	return color
+-- Materials
+local stick              = xcompat.materials.stick
+local fabric             = "group:wool"
+local fabric_repair_only = xcompat.materials.paper
+local string             = xcompat.materials.string
+if core.get_modpath("fl_trees") then
+	-- Fix for Farlands xcompat string alternative not working during crafting
+	string = stick
 end
 
-local function get_color_name(name)
-	name = string.gsub(name, "^dye:", "")
-	return translated_colors[name]
-end
 
-local function get_color_name_from_color(color)
-	for name, color_hex in pairs(dye_colors) do
-		if color == color_hex then
-			return translated_colors[name]
-		end
-	end
 
-	return nil
-end
+-- Placeholder repairing recipes (Doesn't directly apply repair, see handler)
+local repair_percentage = 100
+local repair_items      = {fabric, fabric_repair_only}
+minetest.register_craft({
+	output = "deltaglider:glider",
+	recipe = {
+		{fabric_repair_only, fabric_repair_only,   fabric_repair_only},
+		{fabric_repair_only, "deltaglider:glider", fabric_repair_only},
+		{fabric_repair_only, fabric_repair_only,   fabric_repair_only},
+	},
+})
 
--- This recipe is just a placeholder
+minetest.register_craft({
+	output = "deltaglider:glider",
+	recipe = {"deltaglider:glider", fabric},
+	type = "shapeless",
+})
+
+-- Placeholder color recipe (Doesn't drectly apply color, see handler)
 do
 	local item = ItemStack("deltaglider:glider")
-	item:get_meta():set_string("description", S("Coloured Delta Glider"))
+	item:get_meta():set_string("description", S("Colored Glider"))
 	minetest.register_craft({
 		output = item:to_string(),
-		recipe = { "deltaglider:glider", "group:dye" },
+		recipe = {"deltaglider:glider", "group:dye"},
 		type = "shapeless",
 	})
 end
 
--- This is what actually creates the colored hangglider
-minetest.register_on_craft(function(crafted_item, _, old_craft_grid)
+-- Recipe handler (This is what applies color and repair)
+local function crafting_callback_handle_placeholder_recipe(crafted_item, _, old_craft_grid)
 	if crafted_item:get_name() ~= "deltaglider:glider" then
-		return
+		-- Function called for an unrelated crafting recipe
+		return  
 	end
-	local wear, color, color_name
-	for _ ,stack in ipairs(old_craft_grid) do
+	-- Get existing state and present materials
+	local wear, repaired, dye_name, color, color_name, repaired = 0, false, nil, nil, nil
+	for _,stack in ipairs(old_craft_grid) do
 		local name = stack:get_name()
-		if name == "deltaglider:glider" then
-			wear = stack:get_wear()
-			color = stack:get_meta():get("glider_color")
-			color_name = get_color_name_from_color(color)
+		if not name or name == "" then
+			-- This stack is empty, skip all checks
+		elseif name == "deltaglider:glider" then
+			wear       = stack:get_wear()
+			color      = stack:get_meta():get("glider_color")
+			color_name = colors.get_color_name_from_color(color)
 		elseif minetest.get_item_group(name, "dye") ~= 0 then
-			color = get_dye_color(name)
-			color_name = get_color_name(name)
-		elseif "wool:white" == stack:get_name()
-			or "default:paper" == stack:get_name()
-		then
-			wear = 0
+			dye_name = name
+		else
+			for _,repair_item in ipairs(repair_items) do
+				if name == repair_item 
+					or minetest.get_item_group(name, string.match(repair_item, "^group:(.*)$")) ~= 0 
+				then 
+					repaired = true
+				end
+			end
 		end
 	end
+
+	-- Overwrite color with dye if present
+	if dye_name then
+		color      = colors.get_dye_color(dye_name)
+		color_name = colors.get_color_name(dye_name)
+	end
+
+	-- Repair if any repair item present
+	if repaired then
+		wear = wear - (65535 * (repair_percentage / 100))
+		if wear < 0 then wear = 0 end
+	end
+
+	-- Apply item changes if valid
 	if wear and color and color_name then
 		if color == "ffffff" then
-			return ItemStack({ name = "deltaglider:glider", wear = wear })
+			-- Return an uncolored glider
+			return ItemStack({name = "deltaglider:glider", wear = wear})
 		end
-
 		local meta = crafted_item:get_meta()
 		meta:set_string("description", S("@1 Delta Glider", color_name))
-		meta:set_string("inventory_image",
-			"deltaglider_glider.png^(deltaglider_glider_color.png^[multiply:#"
-			.. color .. ")")
+		meta:set_string("inventory_image", "deltaglider_glider.png^(deltaglider_glider_color.png^[multiply:#"..color..")")
 		meta:set_string("glider_color", color)
 		crafted_item:set_wear(wear)
 		return crafted_item
 	end
-end)
+end
+-- Register handler as a callback for any crafting action
+minetest.register_on_craft(crafting_callback_handle_placeholder_recipe)
 
--- Repairing
-minetest.register_craft({
-	output = "deltaglider:glider",
-	recipe = {
-		{ "default:paper", "default:paper", "default:paper" },
-		{ "default:paper", "deltaglider:glider", "default:paper" },
-		{ "default:paper", "default:paper", "default:paper" },
-	},
-})
-if has_wool then
+
+-- Hangglider recipe shape
+local function register_glider_recipe(_string, _fabric, _stick)
 	minetest.register_craft({
 		output = "deltaglider:glider",
 		recipe = {
-			{ "deltaglider:glider", "wool:white" },
-		},
+			{ _string, _fabric, _string },
+			{ _fabric, _fabric, _fabric },
+			{ _stick,  _stick,  _stick  },
+		}
 	})
 end
 
--- Main craft
-local fabric = "default:paper"
-local stick = "group:stick"
-local string = ""
-if has_wool then
-	fabric = "wool:white"
-end
-if has_farming then
-	string = "farming:string"
-end
+
+-- Register default recipe (So players have a fallback regardless of mod combo)
+register_glider_recipe(string, fabric, stick)
+
+-- Set up modded materials recipe
 if has_ropes then
 	string = "ropes:ropesegment"
 end
 if has_basic_materials then
 	fabric = "basic_materials:plastic_sheet"
 	string = "basic_materials:steel_wire"
-	stick = "basic_materials:steel_strip"
+	stick  = "basic_materials:steel_strip"
 end
+-- Prefer pipeworks stick if present
 if has_pipeworks then
 	stick = "pipeworks:tube_1"
 end
 
-minetest.register_craft({
-	output = "deltaglider:glider",
-	recipe = {
-		{ string, fabric, string },
-		{ fabric, fabric, fabric },
-		{ stick, stick, stick },
-	}
-})
-
+-- Register modded materials recipe 
+register_glider_recipe(string, fabric, stick)
