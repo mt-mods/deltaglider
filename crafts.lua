@@ -1,7 +1,7 @@
 
 local S = deltaglider.translator
 
-local colors = assert(dofile(core.get_modpath("deltaglider") .. "./colors.lua"))
+local colors = assert(dofile(core.get_modpath("deltaglider") .. "/colors.lua"))
 
 local has_basic_materials = minetest.get_modpath("basic_materials")
 local has_pipeworks       = minetest.get_modpath("pipeworks")
