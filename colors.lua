@@ -1,4 +1,4 @@
-local S = hangglider.translator
+local S = deltaglider.translator
 local module = {}
 
 local has_unifieddyes = minetest.get_modpath("unifieddyes")
