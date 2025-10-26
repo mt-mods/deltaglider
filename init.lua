@@ -379,7 +379,7 @@ local on_step = function(self, dtime, moveresult)
 		local luaent
 		for _, obj in ipairs(player:get_children()) do
 			luaent = obj:get_luaentity()
-			if luaent and luaent.name == "hangglider:glider" then
+			if luaent and luaent.name == "deltaglider:glider" then
 				damage_glider(player, self, 2)
 				player:set_detach()
 				player:set_eye_offset(vector_zero(), vector_zero())
@@ -573,7 +573,7 @@ local on_use = function(itemstack, player)
 		if not deltaglider.allow_while_hanggliding then
 			for _, obj in ipairs(player:get_children()) do
 				luaent = obj:get_luaentity()
-				if luaent and luaent.name == "hangglider:glider" then
+				if luaent and luaent.name == "deltaglider:glider" then
 					return
 				end
 			end
