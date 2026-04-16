@@ -81,7 +81,7 @@ local flak_warning = S("You have entered restricted airspace!@n"
 	.. "You will be shot down in @1"
 	.. " seconds by anti-aircraft guns!", flak_warning_time)
 
-local default_drag = 0.01
+local default_drag = 0.02
 
 -- only register chatcommand if [hangglider] isn't available
 if enable_flak and not has_hangglider then
