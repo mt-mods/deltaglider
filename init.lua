@@ -308,7 +308,7 @@ local function update_hud(name, player, rot, rocket_time, speed, vV)
 	end
 
 	huds[name] = player:hud_add({
-		hud_elem_type = "text",
+		type = "text",
 		position  = {x = 0.5, y = 0.8},
 		offset    = {x = 0, y = 0},
 		text      = info,
@@ -670,19 +670,21 @@ local function on_place(_, player)
 end
 
 minetest.register_entity("deltaglider:hangglider", {
-	physical = true,
-	pointable = false,
-	visual = "mesh",
-	mesh = "deltaglider_hangglider.obj",
-	textures = { "deltaglider_hangglider.png" },
-	static_save = false,
-	--Functions
-	on_step = on_step,
+	initial_properties = {
+		physical = true,
+		pointable = false,
+		visual = "mesh",
+		mesh = "deltaglider_hangglider.obj",
+		textures = { "deltaglider_hangglider.png" },
+		static_save = false,
+	},
 	grav_speed = 0,
 	player_name = "",
 	free_fall = false,
 	speed = 0,
 	time_from_last_rocket = rocket_cooldown,
+	--Functions
+	on_step = on_step,
 })
 
 minetest.register_tool("deltaglider:glider", {
