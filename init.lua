@@ -81,6 +81,8 @@ local flak_warning = S("You have entered restricted airspace!@n"
 	.. "You will be shot down in @1"
 	.. " seconds by anti-aircraft guns!", flak_warning_time)
 
+local default_drag = 0.01
+
 -- only register chatcommand if [hangglider] isn't available
 if enable_flak and not has_hangglider then
 	minetest.register_chatcommand("area_flak", {
@@ -400,6 +402,7 @@ local on_step = function(self, dtime, moveresult)
 	local speed = self.speed
 	local rot = self.object:get_rotation()
 	local pos = self.object:get_pos()
+	local nodedef = core.registered_nodes[core.get_node(pos).name]
 
 	-- Check surroundings
 	local land = false
@@ -420,8 +423,7 @@ local on_step = function(self, dtime, moveresult)
 	if land then
 		crash_damage = math_floor(math_max(crash_speed - 5, 0))
 		if crash_damage > 0 then
-			local node = minetest.get_node(pos)
-			if minetest.registered_nodes[node.name].liquidtype == "none" then
+			if nodedef.liquidtype == "none" then
 				-- damage glider first
 				damage_glider(player, self, crash_damage)
 				damage_player(player, crash_damage)
@@ -525,8 +527,14 @@ local on_step = function(self, dtime, moveresult)
 		end
 	end
 
-	speed = math_min(max_speed, math_max(2,
-		(speed - (rot.x ^ 3) * 4 * dtime) - speed * 0.01 * dtime))
+	if nodedef.liquidtype ~= "none" or nodedef.liquid_viscosity > 0 then
+		self.drag = 4 * nodedef.liquid_viscosity
+	else
+		self.drag = default_drag
+	end
+
+	speed = math_min(max_speed, math_max(0,
+		(speed - (rot.x ^ 3) * 4 * dtime) - speed * self.drag * dtime))
 
 	self.object:set_rotation(rot)
 	local dir = rot_to_dir(rot)
@@ -536,6 +544,7 @@ local on_step = function(self, dtime, moveresult)
 	local vertical_acc = lift - 5
 	self.grav_speed = math_min(math_max(self.grav_speed
 		+ vertical_acc * dtime, -10), 1)
+	self.grav_speed = self.grav_speed - self.grav_speed * self.drag * dtime
 
 	dir = vector_new(
 		dir.x * speed,
@@ -683,6 +692,7 @@ minetest.register_entity("deltaglider:hangglider", {
 	free_fall = false,
 	speed = 0,
 	time_from_last_rocket = rocket_cooldown,
+	drag = default_drag,
 	--Functions
 	on_step = on_step,
 })
