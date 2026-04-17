@@ -81,7 +81,7 @@ local flak_warning = S("You have entered restricted airspace!@n"
 	.. "You will be shot down in @1"
 	.. " seconds by anti-aircraft guns!", flak_warning_time)
 
-local default_drag = 0.02
+local default_drag = 0.012
 
 -- only register chatcommand if [hangglider] isn't available
 if enable_flak and not has_hangglider then
@@ -527,24 +527,35 @@ local on_step = function(self, dtime, moveresult)
 		end
 	end
 
-	if nodedef.liquidtype ~= "none" or nodedef.liquid_viscosity > 0 then
-		self.drag = 4 * nodedef.liquid_viscosity
+	local drag_multiplier = 1
+	local rot_multiplier = 4
+	local is_liquid =
+		nodedef.liquidtype ~= "none" and nodedef.liquid_viscosity > 0
+	if is_liquid then
+		self.drag = 0.5
+		drag_multiplier = 4 * (nodedef.liquid_viscosity)
+		rot_multiplier = 0
 	else
 		self.drag = default_drag
 	end
 
 	speed = math_min(max_speed, math_max(0,
-		(speed - (rot.x ^ 3) * 4 * dtime) - speed * self.drag * dtime))
+		(speed - (rot.x ^ 3) * rot_multiplier * dtime)
+		* (1 - self.drag) ^ (dtime * drag_multiplier)))
 
 	self.object:set_rotation(rot)
 	local dir = rot_to_dir(rot)
-	local lift = speed * 0.5 * get_pitch_lift(dir.y)
-		* (1 - (math_abs(rot.z / math_pi)))
+	local vertical_acc = 0
+	if is_liquid then
+		vertical_acc = -0.1
+	else
+		local lift = speed * 0.5 * get_pitch_lift(dir.y)
+			* (1 - (math_abs(rot.z / math_pi)))
+		vertical_acc = lift - 5
+	end
 
-	local vertical_acc = lift - 5
 	self.grav_speed = math_min(math_max(self.grav_speed
-		+ vertical_acc * dtime, -10), 1)
-	self.grav_speed = self.grav_speed - self.grav_speed * self.drag * dtime
+		+ vertical_acc * dtime, -10), 1) * (1 - self.drag) ^ (dtime * drag_multiplier)
 
 	dir = vector_new(
 		dir.x * speed,
