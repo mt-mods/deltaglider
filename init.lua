@@ -81,6 +81,8 @@ local flak_warning = S("You have entered restricted airspace!@n"
 	.. "You will be shot down in @1"
 	.. " seconds by anti-aircraft guns!", flak_warning_time)
 
+local default_drag = 0.012
+
 -- only register chatcommand if [hangglider] isn't available
 if enable_flak and not has_hangglider then
 	minetest.register_chatcommand("area_flak", {
@@ -308,7 +310,7 @@ local function update_hud(name, player, rot, rocket_time, speed, vV)
 	end
 
 	huds[name] = player:hud_add({
-		hud_elem_type = "text",
+		type = "text",
 		position  = {x = 0.5, y = 0.8},
 		offset    = {x = 0, y = 0},
 		text      = info,
@@ -400,6 +402,7 @@ local on_step = function(self, dtime, moveresult)
 	local speed = self.speed
 	local rot = self.object:get_rotation()
 	local pos = self.object:get_pos()
+	local nodedef = core.registered_nodes[core.get_node(pos).name]
 
 	-- Check surroundings
 	local land = false
@@ -420,8 +423,7 @@ local on_step = function(self, dtime, moveresult)
 	if land then
 		crash_damage = math_floor(math_max(crash_speed - 5, 0))
 		if crash_damage > 0 then
-			local node = minetest.get_node(pos)
-			if minetest.registered_nodes[node.name].liquidtype == "none" then
+			if nodedef.liquidtype == "none" then
 				-- damage glider first
 				damage_glider(player, self, crash_damage)
 				damage_player(player, crash_damage)
@@ -525,17 +527,35 @@ local on_step = function(self, dtime, moveresult)
 		end
 	end
 
-	speed = math_min(max_speed, math_max(2,
-		(speed - (rot.x ^ 3) * 4 * dtime) - speed * 0.01 * dtime))
+	local drag_multiplier = 1
+	local rot_multiplier = 4
+	local is_liquid =
+		nodedef.liquidtype ~= "none" and nodedef.liquid_viscosity > 0
+	if is_liquid then
+		self.drag = 0.5
+		drag_multiplier = 4 * (nodedef.liquid_viscosity)
+		rot_multiplier = 0
+	else
+		self.drag = default_drag
+	end
+
+	speed = math_min(max_speed, math_max(0,
+		(speed - (rot.x ^ 3) * rot_multiplier * dtime)
+		* (1 - self.drag) ^ (dtime * drag_multiplier)))
 
 	self.object:set_rotation(rot)
 	local dir = rot_to_dir(rot)
-	local lift = speed * 0.5 * get_pitch_lift(dir.y)
-		* (1 - (math_abs(rot.z / math_pi)))
+	local vertical_acc = 0
+	if is_liquid then
+		vertical_acc = -0.1
+	else
+		local lift = speed * 0.5 * get_pitch_lift(dir.y)
+			* (1 - (math_abs(rot.z / math_pi)))
+		vertical_acc = lift - 5
+	end
 
-	local vertical_acc = lift - 5
 	self.grav_speed = math_min(math_max(self.grav_speed
-		+ vertical_acc * dtime, -10), 1)
+		+ vertical_acc * dtime, -10), 1) * (1 - self.drag) ^ (dtime * drag_multiplier)
 
 	dir = vector_new(
 		dir.x * speed,
@@ -670,19 +690,22 @@ local function on_place(_, player)
 end
 
 minetest.register_entity("deltaglider:hangglider", {
-	physical = true,
-	pointable = false,
-	visual = "mesh",
-	mesh = "deltaglider_hangglider.obj",
-	textures = { "deltaglider_hangglider.png" },
-	static_save = false,
-	--Functions
-	on_step = on_step,
+	initial_properties = {
+		physical = true,
+		pointable = false,
+		visual = "mesh",
+		mesh = "deltaglider_hangglider.obj",
+		textures = { "deltaglider_hangglider.png" },
+		static_save = false,
+	},
 	grav_speed = 0,
 	player_name = "",
 	free_fall = false,
 	speed = 0,
 	time_from_last_rocket = rocket_cooldown,
+	drag = default_drag,
+	--Functions
+	on_step = on_step,
 })
 
 minetest.register_tool("deltaglider:glider", {
